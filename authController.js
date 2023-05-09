@@ -67,3 +67,23 @@ exports.login = async (req, res, next) => {
     // 3) If everything ok, send token to client
     createSendToken(user, 200, res);
   };
+
+exports.protect = async (req, res, next) => {
+    let token;
+    if(
+      req.headers.authorization && 
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+    if(!token){
+      return next(res.json({message: 'not logged in'}))
+    }
+    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
+    const currentUser = await User.findById(decoded.id);
+    if(!currentUser){
+      return next(res.json({message: 'this user does not exist anymore'}))
+    }
+    req.user = currentUser;
+    next();
+  }
